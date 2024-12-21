@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Runner Game</title>
+    <style>
+        body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #87CEEB;
+    height: 100vh;
+}
+
+#game-container {
+    position: relative;
+}
+
+canvas {
+    background-color: white;
+    display: block;
+    border: 2px solid black;
+}
+
+#score {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 20px;
+    color: black;
+    font-family: Arial, sans-serif;
+}
+
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="score">Score: 0</div>
+    </div>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const canvasWidth = 800;
+const canvasHeight = 600;
+canvas.width = canvasWidth;
+canvas.height = canvasHeight;
+
+let score = 0;
+let player = { x: 100, y: canvasHeight - 60, width: 50, height: 50, speed: 10 }; // Increased speed
+let coins = [];
+let trees = [];
+let birds = [];
+
+const coinSize = 20;
+const treeWidth = 40;
+const treeHeight = 60;
+const birdWidth = 40;
+const birdHeight = 40;
+
+// Listen for keydown events to control the player
+document.addEventListener("keydown", handleKeyDown);
+
+function handleKeyDown(e) {
+    if (e.key === "ArrowLeft") {
+        player.x -= player.speed; // Move left
+    } else if (e.key === "ArrowRight") {
+        player.x += player.speed; // Move right
+    } else if (e.key === "ArrowUp") {
+        player.y -= player.speed; // Move up
+    } else if (e.key === "ArrowDown") {
+        player.y += player.speed; // Move down
+    }
+}
+
+// Game object update and movement logic
+function updateGameObjects() {
+    // Prevent the player from moving off the screen boundaries
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.width > canvasWidth) player.x = canvasWidth - player.width;
+    if (player.y < 0) player.y = 0;
+    if (player.y + player.height > canvasHeight) player.y = canvasHeight - player.height;
+
+    // Spawn coins, trees, and birds randomly
+    if (Math.random() < 0.02) {
+        coins.push({ x: canvasWidth, y: Math.random() * (canvasHeight - 100) + 100, size: coinSize });
+    }
+    if (Math.random() < 0.03) {
+        trees.push({ x: canvasWidth, y: canvasHeight - treeHeight - 50 });
+    }
+    if (Math.random() < 0.03) {
+        birds.push({ x: canvasWidth, y: Math.random() * (canvasHeight - 200) + 50 });
+    }
+
+    // Move coins, trees, and birds to the left
+    for (let coin of coins) {
+        coin.x -= 5;
+    }
+    for (let tree of trees) {
+        tree.x -= 5;
+    }
+    for (let bird of birds) {
+        bird.x -= 5;
+    }
+
+    // Remove off-screen objects
+    coins = coins.filter(coin => coin.x + coin.size > 0);
+    trees = trees.filter(tree => tree.x + treeWidth > 0);
+    birds = birds.filter(bird => bird.x + birdWidth > 0);
+}
+
+// Collision detection logic
+function detectCollisions() {
+    // Check if player collides with any coin
+    for (let i = 0; i < coins.length; i++) {
+        let coin = coins[i];
+        if (player.x < coin.x + coin.size && player.x + player.width > coin.x &&
+            player.y < coin.y + coin.size && player.y + player.height > coin.y) {
+            coins.splice(i, 1); // Remove the coin
+            score += 10; // Increase score
+            break;
+        }
+    }
+
+    // Check if player collides with any tree (game over)
+    for (let tree of trees) {
+        if (player.x < tree.x + treeWidth && player.x + player.width > tree.x &&
+            player.y < tree.y + treeHeight && player.y + player.height > tree.y) {
+            endGame();
+        }
+    }
+
+    // Check if player collides with any bird (game over)
+    for (let bird of birds) {
+        if (player.x < bird.x + birdWidth && player.x + player.width > bird.x &&
+            player.y < bird.y + birdHeight && player.y + player.height > bird.y) {
+            endGame();
+        }
+    }
+}
+
+// End the game if player collides with an obstacle
+function endGame() {
+    alert("Game Over! Your final score is " + score);
+    resetGame();
+}
+
+// Reset the game to its initial state
+function resetGame() {
+    score = 0;
+    player = { x: 100, y: canvasHeight - 60, width: 50, height: 50, speed: 10 }; // Reset speed here as well
+    coins = [];
+    trees = [];
+    birds = [];
+}
+
+// Draw game objects like player, coins, obstacles, and score
+function drawGameObjects() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+
+    // Draw the player (green box)
+    ctx.fillStyle = "green";
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+
+    // Draw coins (yellow circles)
+    ctx.fillStyle = "yellow";
+    for (let coin of coins) {
+        ctx.beginPath();
+        ctx.arc(coin.x, coin.y, coin.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Draw trees (brown rectangles)
+    ctx.fillStyle = "brown";
+    for (let tree of trees) {
+        ctx.fillRect(tree.x, tree.y, treeWidth, treeHeight);
+    }
+
+    // Draw birds (red rectangles)
+    ctx.fillStyle = "red";
+    for (let bird of birds) {
+        ctx.fillRect(bird.x, bird.y, birdWidth, birdHeight);
+    }
+
+    // Draw score text at top left
+    document.getElementById("score").innerText = "Score: " + score;
+}
+
+// Main game loop that runs continuously
+function gameLoop() {
+    updateGameObjects(); // Update positions and game state
+    detectCollisions(); // Check for collisions with coins and obstacles
+    drawGameObjects(); // Draw everything on the screen
+    requestAnimationFrame(gameLoop); // Loop the game
+}
+
+gameLoop(); // Start the game loop
+
+    </script>
+</body>
+</html>
